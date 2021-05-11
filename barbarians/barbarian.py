@@ -207,7 +207,7 @@ class Barbarian(object):
         if not self._recipe_publish_dir:
             self._recipe_publish_dir = os.path.join(
                 self.root_dir,
-                ".barbarian",
+                ".barbarian_upload",
                 *self.recipe_name_and_version)
             # print("[INFO] recipe_publish_dir =", self._recipe_publish_dir)
 
@@ -291,45 +291,64 @@ class Barbarian(object):
         self.recipe_exported_revision = args
         self.recipe_publish_dir = args
         self.recipe_revision_pub_dir = args
+        self.recipe_name_and_version = args
         print("[INFO] Uploading revision %s to %s" %
               (self.recipe_exported_revision, self.recipe_publish_dir))
-        # Remove old data.
-        rmtree(self.recipe_revision_pub_dir, ignore_errors=True)
-        os.makedirs(self.recipe_revision_pub_dir)
-        # Copy export data.
-        copytree(
-            os.path.join(self.recipe_export_dir, "export"),
-            os.path.join(self.recipe_revision_pub_dir, "files"))
-        # Generate the conan_export.tgz.
-        conandata_yml = os.path.join(
-            self.recipe_export_dir, "export", "conandata.yml")
-        conan_export_tgz = os.path.join(
-            self.recipe_revision_pub_dir, "files", "conan_export.tgz")
-        with tarfile.open(conan_export_tgz, 'w|gz') as tgz:
-            tgz.add(conandata_yml, os.path.basename(conandata_yml))
-        # Generate snapshot.json (v1) and files.json (v2).
-        snapshot = {}
-        files = {'files': {}}
-        with open(conan_export_tgz, "rb") as f:
-            digest = hashlib.md5(f.read()).hexdigest()
-            snapshot[os.path.basename(conan_export_tgz)] = digest
-            files['files'][os.path.basename(conan_export_tgz)] = {}
-        with open(os.path.join(self.recipe_export_dir, "export", "conanmanifest.txt"), "rb") as f:
-            snapshot["conanmanifest.txt"] = hashlib.md5(f.read()).hexdigest()
-            files['files']["conanmanifest.txt"] = {}
-        with open(os.path.join(self.recipe_export_dir, "export", "conanfile.py"), "rb") as f:
-            snapshot["conanfile.py"] = hashlib.md5(f.read()).hexdigest()
-            files['files']["conanfile.py"] = {}
-        with open(os.path.join(self.recipe_revision_pub_dir, "snapshot.json"), "w", encoding="utf-8") as f:
-            json.dump(snapshot, f)
-        with open(os.path.join(self.recipe_revision_pub_dir, "files.json"), "w", encoding="utf-8") as f:
-            json.dump(files, f)
-        # Update latest.json.
-        latest = {
-            'revision': self.recipe_exported_revision,
-            'time': datetime.datetime.utcnow().isoformat()+"+0000"}
-        with open(os.path.join(self.recipe_publish_dir, "latest.json"), "w", encoding="utf-8") as f:
-            json.dump(latest, f)
+        # Checkout the upload branch.
+        self.make_barbarian_branch()
+        worktree_dir = os.path.join(self.root_dir, ".barbarian_upload")
+        cwd = getcwd()
+        self.exec(["git", "worktree", "add", worktree_dir, "barbarian"])
+        try:
+            # Remove old data.
+            rmtree(self.recipe_revision_pub_dir, ignore_errors=True)
+            os.makedirs(self.recipe_revision_pub_dir)
+            # Copy export data.
+            copytree(
+                os.path.join(self.recipe_export_dir, "export"),
+                os.path.join(self.recipe_revision_pub_dir, "files"))
+            # Generate the conan_export.tgz.
+            conandata_yml = os.path.join(
+                self.recipe_export_dir, "export", "conandata.yml")
+            conan_export_tgz = os.path.join(
+                self.recipe_revision_pub_dir, "files", "conan_export.tgz")
+            with tarfile.open(conan_export_tgz, 'w|gz') as tgz:
+                tgz.add(conandata_yml, os.path.basename(conandata_yml))
+            # Generate snapshot.json (v1) and files.json (v2).
+            snapshot = {}
+            files = {'files': {}}
+            with open(conan_export_tgz, "rb") as f:
+                digest = hashlib.md5(f.read()).hexdigest()
+                snapshot[os.path.basename(conan_export_tgz)] = digest
+                files['files'][os.path.basename(conan_export_tgz)] = {}
+            with open(os.path.join(self.recipe_export_dir, "export", "conanmanifest.txt"), "rb") as f:
+                snapshot["conanmanifest.txt"] = hashlib.md5(
+                    f.read()).hexdigest()
+                files['files']["conanmanifest.txt"] = {}
+            with open(os.path.join(self.recipe_export_dir, "export", "conanfile.py"), "rb") as f:
+                snapshot["conanfile.py"] = hashlib.md5(f.read()).hexdigest()
+                files['files']["conanfile.py"] = {}
+            with open(os.path.join(self.recipe_revision_pub_dir, "snapshot.json"), "w", encoding="utf-8") as f:
+                json.dump(snapshot, f)
+            with open(os.path.join(self.recipe_revision_pub_dir, "files.json"), "w", encoding="utf-8") as f:
+                json.dump(files, f)
+            # Update latest.json.
+            latest = {
+                'revision': self.recipe_exported_revision,
+                'time': datetime.datetime.utcnow().isoformat()+"+0000"}
+            with open(os.path.join(self.recipe_publish_dir, "latest.json"), "w", encoding="utf-8") as f:
+                json.dump(latest, f)
+            # Commit changes.
+            chdir(worktree_dir)
+            self.exec(["git", "add", "."])
+            self.exec(["git", "status"])
+            self.exec(["git", "commit", "-m", "Upload %s/%s revision %s." % (
+                self.recipe_name_and_version[0], self.recipe_name_and_version[1],
+                self.recipe_exported_revision)])
+        finally:
+            # Clean up the upload tree.
+            chdir(cwd)
+            self.exec(["git", "worktree", "remove", "-f", worktree_dir])
 
     def command_branch(self, args):
         self.make_barbarian_branch()
