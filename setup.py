@@ -8,7 +8,7 @@ setup(
     name='barbarian',
     description='Utility tool for managing Conan recipes for the Barbarian Conan server.',
     version='0.1',
-    url='https://github.com/bfgroup/barbarian-cli',
+    url='https://barbarian.bfgroup.xyz',
     author='René Ferdinand Rivera Morell',
     author_email='grafikrobot@gmail.com',
     classifiers=[
@@ -25,10 +25,8 @@ setup(
               'dependency', 'tool', 'c', 'c++', 'cpp'],
     license='BSL 1.0',
 
-    install_requires=[
-        'conan >= 1.35'
-    ],
-    package_data={'bfgroup': []},
+    install_requires=['conan >= 1.36'],
+    package_data={'barbarians': []},
     packages=['barbarians'],
 
     entry_points={

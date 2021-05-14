@@ -41,7 +41,7 @@ class Barbarian(object):
             help="user/channel, Pkg/version@user/channel (if name and version are not declared in the conanfile.py) Pkg/version@ if user/channel is not relevant."
         )
 
-        # Create upload branch..
+        # Upload branch..
         ap_branch = ap_sub.add_parser(
             "branch",
             help="Create, if needed, the 'barbarian' branch for uploading exported recipes to.")
@@ -270,6 +270,10 @@ class Barbarian(object):
             print("[INFO] Creating 'barbarian' branch.")
             self.make_empty_branch("barbarian", "Barbarian upload branch.")
 
+    def push_barbarian_branch(self):
+        self.make_barbarian_branch()
+        self.exec(["git", "push", "origin", "barbarian"])
+
     # Commands..
 
     def command_export(self, args):
@@ -345,13 +349,18 @@ class Barbarian(object):
             self.exec(["git", "commit", "-m", "Upload %s/%s revision %s." % (
                 self.recipe_name_and_version[0], self.recipe_name_and_version[1],
                 self.recipe_exported_revision)])
+            # Upload, aka push, the branch.
+            self.push_barbarian_branch()
         finally:
             # Clean up the upload tree.
             chdir(cwd)
             self.exec(["git", "worktree", "remove", "-f", worktree_dir])
 
     def command_branch(self, args):
-        self.make_barbarian_branch()
+        if args.action == "create":
+            self.make_barbarian_branch()
+        elif args.action == "push":
+            self.push_barbarian_branch()
 
 
 def main():
