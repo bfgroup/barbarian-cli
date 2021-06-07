@@ -2,12 +2,13 @@
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE.txt or http://www.boost.org/LICENSE_1_0.txt)
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
+    # metadata
     name='barbarian',
-    description='Utility tool for managing Conan recipes for the Barbarian Conan server.',
     version='0.1',
+    description='Utility tool for managing Conan recipes for the Barbarian Conan server.',
     url='https://barbarian.bfgroup.xyz',
     author='René Ferdinand Rivera Morell',
     author_email='grafikrobot@gmail.com',
@@ -15,20 +16,19 @@ setup(
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
-        'License :: OSI Approved :: Boost Software License 1.0',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8'
+        'License :: OSI Approved :: Boost Software License 1.0 (BSL-1.0)',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 3'
     ],
     keywords=['C/C++', 'package', 'libraries', 'developer', 'manager',
               'dependency', 'tool', 'c', 'c++', 'cpp'],
     license='BSL 1.0',
-
-    install_requires=['conan >= 1.36'],
+    # options
+    install_requires=['conan >= 1.37'],
     package_data={'barbarians': []},
-    packages=['barbarians'],
-
+    package_dir={"": "src"},
+    packages=find_packages(where="src"),
+    python_requires=">=3.6",
     entry_points={
         'console_scripts': [
             'barbarian=barbarians.barbarian:run'

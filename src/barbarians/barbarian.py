@@ -11,6 +11,7 @@ import json
 import os.path
 import tarfile
 import datetime
+from conans import tools
 
 
 class Barbarian(object):
@@ -51,6 +52,17 @@ class Barbarian(object):
             choices=['create', 'push']
         )
 
+        # Create CI recipe testing setup.
+        ap_ci = ap_sub.add_parser(
+            "ci",
+            help="Create setup, i.e. scripts, for testing in CI.")
+        ap_ci.add_argument(
+            "--service",
+            help="The type of service to set up.",
+            choices=["ga"],
+            default="ga"
+        )
+
         self.args = ap.parse_args()
 
         if self.args.command:
@@ -82,8 +94,7 @@ class Barbarian(object):
     def root_dir(self, args):
         self.recipe_dir = args
         if not self._root_dir:
-            dir = os.path.dirname(
-                self.recipe_dir) if self.recipe_dir else getcwd()
+            dir = self.recipe_dir if self.recipe_dir else getcwd()
             while not os.path.exists(os.path.join(dir, ".git")):
                 dir = os.path.dirname(dir)
             self._root_dir = dir
@@ -134,7 +145,8 @@ class Barbarian(object):
                     recipe_n = recipe_nv[0]
                     recipe_v = recipe_nv[1]
             self._recipe_name_and_version = [recipe_n, recipe_v]
-            # print("[INFO] recipe_name_and_version =", self._recipe_name_and_version)
+            # print("[INFO] recipe_name_and_version =",
+            #       self._recipe_name_and_version)
 
     # Recipe data dir where the export puts information. This is locally controlled to be relative to
     # the root dir. And calculated from root dir and "self.recipe_name_and_version".
@@ -249,7 +261,9 @@ class Barbarian(object):
     # Utilities..
 
     def have_branch(self, branch):
-        return self.exec(["git", "branch", "--list", branch], capture_output=True).stdout.strip() == branch
+        branch_list = self.exec(
+            ["git", "branch", "--list", branch], capture_output=True).stdout.strip("\n\t *+")
+        return branch_list == branch
 
     def make_empty_branch(self, branch, message):
         if not self.have_branch(branch):
@@ -285,6 +299,14 @@ class Barbarian(object):
         print("[INFO] Exporting to %s" % (self.recipe_export_dir))
         # Remove old data.
         rmtree(self.recipe_data_dir, ignore_errors=True)
+        # Tweak gitignore to blank out temp conan data.
+        gitignore_path = os.path.join(self.root_dir, ".gitignore")
+        if not os.path.exists(gitignore_path):
+            tools.touch(gitignore_path)
+        gitignore = tools.load(gitignore_path)
+        if not '/.conan/' in gitignore:
+            gitignore = "/.conan/\n" + gitignore
+            tools.save(gitignore_path, gitignore)
         # Do the basic export.
         env = {'CONAN_USER_HOME': self.root_dir}
         self.exec(["conan", "export", args.path, args.reference], env=env)
@@ -361,6 +383,88 @@ class Barbarian(object):
             self.make_barbarian_branch()
         elif args.action == "push":
             self.push_barbarian_branch()
+
+    ga_conan_workflow_template = '''\
+env:
+    CONAN_REMOTES: "https://barbarian.bfgroup.xyz/@barbarian, https://bincrafters.jfrog.io/artifactory/api/conan/public-conan@bincrafters"
+    BPT_SPLIT_BY_BUILD_TYPES: "true"
+    # CONAN_USERNAME: ""
+    # CONAN_CHANNEL: ""
+
+on:
+    push:
+        branches: ["main", "develop"]
+    pull_request:
+
+name: conan
+
+jobs:
+    generate-matrix:
+        name: Generate Job Matrix
+        runs-on: ubuntu-latest
+        outputs:
+            matrix: ${{ steps.set-matrix.outputs.matrix }}
+        env:
+            BPT_CONFIG_FILE_VERSION: "11"
+        steps:
+            - uses: actions/checkout@v2
+              with:
+                  fetch-depth: "0"
+            - uses: actions/setup-python@v2
+              with:
+                  python-version: "3.x"
+            - name: Install Package Tools
+              run: |
+                  pip install git+https://github.com/bincrafters/bincrafters-package-tools@issue/1391
+                  conan user
+            - name: Generate Job Matrix
+              id: set-matrix
+              run: |
+                  MATRIX=$(bincrafters-package-tools generate-ci-jobs --platform gha)
+                  echo "${MATRIX}"
+                  echo "::set-output name=matrix::${MATRIX}"
+    conan:
+        needs: generate-matrix
+        runs-on: ${{ matrix.config.os }}
+        strategy:
+            fail-fast: false
+            matrix: ${{fromJson(needs.generate-matrix.outputs.matrix)}}
+        name: ${{ matrix.config.name }}
+        env:
+            BPT_CONFIG_FILE_VERSION: "11"
+        steps:
+            - uses: actions/checkout@v2
+              with:
+                  fetch-depth: "0"
+            - uses: actions/setup-python@v2
+              with:
+                  python-version: "3.x"
+            - name: Install Conan
+              env:
+                  BPT_MATRIX: ${{toJson(matrix.config)}}
+              run: |
+                  pip install git+https://github.com/bincrafters/bincrafters-package-tools@issue/1391
+                  # remove newlines from matrix first
+                  matrix=$(echo ${BPT_MATRIX})
+                  bincrafters-package-tools prepare-env --platform gha --config "${matrix}"
+              shell: bash
+            - name: Run
+              run: |
+                  bincrafters-package-tools --auto
+'''
+
+    def command_ci(self, args):
+        # Compute state.
+        self.root_dir = args
+        # Create setup.
+        if args.service == "ga":
+            ga_conan_workflow_path = os.path.join(
+                self.root_dir, ".github", "workflows", "conan.yml")
+            print("[INFO] Creating GitHuub Actions setup %s" %
+                  (ga_conan_workflow_path))
+            os.makedirs(os.path.dirname(
+                ga_conan_workflow_path), exist_ok=True)
+            tools.save(ga_conan_workflow_path, self.ga_conan_workflow_template)
 
 
 def main():
