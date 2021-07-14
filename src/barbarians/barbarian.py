@@ -386,7 +386,7 @@ class Barbarian(object):
 
     ga_conan_workflow_template = '''\
 env:
-    CONAN_REMOTES: "https://barbarian.bfgroup.xyz/@barbarian, https://bincrafters.jfrog.io/artifactory/api/conan/public-conan@bincrafters"
+    CONAN_REMOTES: "https://barbarian.bfgroup.xyz/github@barbarian-github, https://bincrafters.jfrog.io/artifactory/api/conan/public-conan@bincrafters"
     BPT_SPLIT_BY_BUILD_TYPES: "true"
     # CONAN_USERNAME: ""
     # CONAN_CHANNEL: ""
