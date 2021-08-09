@@ -2,7 +2,7 @@
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE.txt or http://www.boost.org/LICENSE_1_0.txt)
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Action
 from os import environ, getcwd, chdir
 from shutil import rmtree, copytree
 from subprocess import run, PIPE
@@ -11,6 +11,7 @@ import json
 import os.path
 import tarfile
 import datetime
+import yaml
 from conans import tools
 
 
@@ -52,16 +53,31 @@ class Barbarian(object):
             choices=['create', 'push']
         )
 
-        # Create CI recipe testing setup.
-        ap_ci = ap_sub.add_parser(
-            "ci",
-            help="Create setup, i.e. scripts, for testing in CI.")
-        ap_ci.add_argument(
-            "--service",
-            help="The type of service to set up.",
-            choices=["ga"],
-            default="ga"
-        )
+        # Create new recipe and/or other support files.
+        ap_new = ap_sub.add_parser(
+            "new",
+            help="Creates a new package recipe template and/or support files.")
+        ap_new.add_argument(
+            "reference",
+            help="name/version@user/channel")
+        ap_new.add_argument(
+            "--overwrite",
+            help="Overwrite existing files, if present, with new files.",
+            action="store_true")
+        ap_new.add_argument(
+            "--recipe",
+            help="The style of package recipe to generate, and flag to generate recipe.",
+            choices=['standalone', 'collection'],
+            action=ChoiceArgAction)
+        ap_new.add_argument(
+            "--header-only",
+            help="Create a header only package recipe.",
+            action="store_true")
+        ap_new.add_argument(
+            "--ci",
+            help="Create setup, i.e. scripts, for testing in CI for the given service.",
+            choices=["github"],
+            action=ChoiceArgAction)
 
         self.args = ap.parse_args()
 
@@ -288,6 +304,23 @@ class Barbarian(object):
         self.make_barbarian_branch()
         self.exec(["git", "push", "origin", "barbarian"])
 
+    bpt_package_reference = "git+https://github.com/bincrafters/bincrafters-package-tools@issue/1391"
+
+    def render_template(self, template, path):
+        text = template
+        text = text.replace(
+            "<<<USER>>>", self.recipe_user_and_channel[0])
+        text = text.replace(
+            "<<<GROUP>>>", self.recipe_user_and_channel[1])
+        text = text.replace(
+            "<<<NAME>>>", self._recipe_name_and_version[0])
+        text = text.replace(
+            "<<<VERSION>>>", self._recipe_name_and_version[1])
+        text = text.replace(
+            "<<<BPT_PACKAGE>>>", self.bpt_package_reference)
+        with open(path, "w") as file:
+            file.write(text)
+
     # Commands..
 
     def command_export(self, args):
@@ -384,12 +417,83 @@ class Barbarian(object):
         elif args.action == "push":
             self.push_barbarian_branch()
 
+    def command_new(self, args):
+        # Compute state.
+        self.root_dir = args
+        self.recipe_name_and_version = args
+        self.recipe_user_and_channel = args
+        # While config files to generate.
+        to_generate = set()
+        if args.recipe:
+            to_generate.add('recipe')
+        if args.ci:
+            to_generate.add('ci')
+        # print("[DEBUG] to_generate:", *to_generate)
+        # exit(1)
+
+        if 'recipe' in to_generate:
+            # Create recipe.
+            package_dir = None
+            if args.recipe == "standalone":
+                package_dir = self.root_dir
+            elif args.recipe == "collection":
+                package_dir = os.path.join(
+                    self.root_dir, "recipes", self._recipe_name_and_version[0], "all")
+            conanfile_py_path = os.path.join(package_dir, "conanfile.py")
+            if os.path.exists(conanfile_py_path) and not args.overwrite:
+                print("[INFO] Skipped overwrite of existing recipe %s" %
+                    (conanfile_py_path))
+            else:
+                print("[INFO] Creating recipe %s" % (conanfile_py_path))
+                conanfile_py_text = self.conanfile_py_base_template
+                if args.header_only:
+                    conanfile_py_text += self.conanfile_py_header_only_template
+                else:
+                    conanfile_py_text += self.conanfile_py_build_template
+                os.makedirs(os.path.dirname(conanfile_py_path), exist_ok=True)
+                self.render_template(conanfile_py_text, conanfile_py_path)
+            conandata_yml_path = os.path.join(package_dir, "conandata.yml")
+            if os.path.exists(conandata_yml_path) and not args.overwrite:
+                print("[INFO] Skipped overwrite of existing recipe data %s" %
+                    (conandata_yml_path))
+            else:
+                print("[INFO] Creating recipe data %s" % (conandata_yml_path))
+                self.render_template(
+                    self.conandata_yml_template, conandata_yml_path)
+            # Update recipe index.
+            if args.recipe == "collection":
+                config_yml_path = os.path.join(
+                    os.path.dirname(os.path.dirname(conanfile_py_path)), "config.yml")
+                config_yml_data = {}
+                if os.path.exists(config_yml_path):
+                    with open(config_yml_path, "r") as config_yml:
+                        config_yml_data = yaml.safe_load(config_yml)
+                config_yml_data['versions'] = {
+                    self.recipe_name_and_version[1]: {
+                        'folder': 'all'}}
+                print("[INFO] Updating recipe info %s" % (config_yml_path))
+                with open(config_yml_path, "w") as config_yml:
+                    yaml.dump(config_yml_data, config_yml)
+        if 'ci' in to_generate:
+            # Create CI setup.
+            if args.ci == "github":
+                ga_conan_workflow_path = os.path.join(
+                    self.root_dir, ".github", "workflows", "conan.yml")
+                if os.path.exists(ga_conan_workflow_path) and not args.overwrite:
+                    print("[INFO] Skipped overwrite of existing GitHub Actions setup %s" %
+                        (ga_conan_workflow_path))
+                else:
+                    print("[INFO] Creating GitHub Actions setup %s" %
+                        (ga_conan_workflow_path))
+                    os.makedirs(os.path.dirname(
+                        ga_conan_workflow_path), exist_ok=True)
+                    self.render_template(
+                        self.ga_conan_workflow_template, ga_conan_workflow_path)
+
     ga_conan_workflow_template = '''\
 env:
     CONAN_REMOTES: "https://barbarian.bfgroup.xyz/github@barbarian-github, https://bincrafters.jfrog.io/artifactory/api/conan/public-conan@bincrafters"
     BPT_SPLIT_BY_BUILD_TYPES: "true"
-    # CONAN_USERNAME: ""
-    # CONAN_CHANNEL: ""
 
 on:
     push:
@@ -415,7 +519,7 @@ jobs:
                   python-version: "3.x"
             - name: Install Package Tools
               run: |
-                  pip install git+https://github.com/bincrafters/bincrafters-package-tools@issue/1391
+                  pip install <<<BPT_PACKAGE>>>
                   conan user
             - name: Generate Job Matrix
               id: set-matrix
@@ -443,7 +547,7 @@ jobs:
               env:
                   BPT_MATRIX: ${{toJson(matrix.config)}}
               run: |
-                  pip install git+https://github.com/bincrafters/bincrafters-package-tools@issue/1391
+                  pip install <<<BPT_PACKAGE>>>
                   # remove newlines from matrix first
                   matrix=$(echo ${BPT_MATRIX})
                   bincrafters-package-tools prepare-env --platform gha --config "${matrix}"
@@ -452,19 +556,103 @@ jobs:
               run: |
                   bincrafters-package-tools --auto
 '''
+    conanfile_py_base_template = '''\
+from conans import ConanFile, tools
+import os
 
-    def command_ci(self, args):
-        # Compute state.
-        self.root_dir = args
-        # Create setup.
-        if args.service == "ga":
-            ga_conan_workflow_path = os.path.join(
-                self.root_dir, ".github", "workflows", "conan.yml")
-            print("[INFO] Creating GitHuub Actions setup %s" %
-                  (ga_conan_workflow_path))
-            os.makedirs(os.path.dirname(
-                ga_conan_workflow_path), exist_ok=True)
-            tools.save(ga_conan_workflow_path, self.ga_conan_workflow_template)
+
+class Package(ConanFile):
+    name = "<<<NAME>>>"
+    homepage = "https://github.com/<<<USER>>>/<<<NAME>>>"
+    description = "<<<SHORT_DESCRIPTION>>>"
+    topics = ("<<<TOPICS>>>")
+    license = "<<<LICENSE>>>"
+    url = "https://github.com/<<<USER>>>/<<<GROUP>>>"
+    barbarian = {
+        "description": {
+            "format": "asciidoc",
+            "text": \'\'\'\\
+<<<LONG_DESCRIPTION>>>
+\'\'\'
+        }
+    }
+    source_subfolder = "source_subfolder"
+
+    def source(self):
+        tools.get(
+            **self.conan_data["sources"][self.version],
+            strip_root=True, destination=self.source_subfolder)
+'''
+
+    conanfile_py_header_only_template = '''
+    no_copy_source = True
+
+    def package_id(self):
+        self.info.header_only()
+
+    def package(self):
+        self.copy(
+            pattern="LICENSE.txt", dst="licenses",
+            src=self.source_subfolder)
+        for pattern in ["*.h", "*.hpp", "*.hxx"]:
+            self.copy(
+                pattern=pattern, dst="include",
+                src=os.path.join(self.source_subfolder, "include"))
+'''
+
+    conanfile_py_build_template = '''
+    settings = "os", "compiler", "build_type", "arch"
+    options = {"shared": [True, False], "fPIC": [True, False]}
+    default_options = {"shared": False, "fPIC": True}
+
+    def config_options(self):
+        if self.settings.os == "Windows":
+            del self.options.fPIC
+
+    def build(self):
+        pass
+
+    def package(self):
+        self.copy(
+            pattern="LICENSE.txt", dst="licenses",
+            src=self.source_subfolder)
+        for pattern in ["*.h", "*.hpp", "*.hxx"]:
+            self.copy(
+                pattern=pattern, dst="include",
+                src=os.path.join(self.source_subfolder, "include"))
+        for pattern in ["*.lib", "*.so", "*.dylib", "*.a"]:
+            self.copy(pattern=pattern, dst="lib", keep_path=False)
+        for pattern in ["*.dll", "*.exe"]:
+            self.copy(pattern=pattern, dst="bin", keep_path=False)
+'''
+
+    conandata_yml_template = '''\
+sources:
+  "<<<VERSION>>>":
+    url: "https://github.com/<<<USER>>>/<<<NAME>>>/archive/refs/tags/<<<VERSION>>>.tar.gz"
+'''
+
+
+class CollectArgAction(Action):
+    def __init__(self, option_strings, dest, default=set(), **kwargs):
+        if not isinstance(default, set):
+            default = set([default])
+        super().__init__(option_strings, dest, default=default, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        dest = getattr(namespace, self.dest)
+        dest.add(values)
+        setattr(namespace, self.dest, dest)
+
+
+class ChoiceArgAction(Action):
+    def __init__(self, option_strings, dest, default=None, nargs=None, **kwargs):
+        super().__init__(option_strings, dest, nargs="?", **kwargs)
+        self.flag_default = default
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        values = self.choices[0] if not values else values
+        setattr(namespace, self.dest, values)
 
 
 def main():
