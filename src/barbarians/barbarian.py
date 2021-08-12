@@ -478,7 +478,7 @@ class Barbarian(object):
             # Create CI setup.
             if args.ci == "github":
                 ga_conan_workflow_path = os.path.join(
-                    self.root_dir, ".github", "workflows", "conan.yml")
+                    self.root_dir, ".github", "workflows", "barbarian.yml")
                 if os.path.exists(ga_conan_workflow_path) and not args.overwrite:
                     print("[INFO] Skipped overwrite of existing GitHub Actions setup %s" %
                         (ga_conan_workflow_path))
