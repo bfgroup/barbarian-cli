@@ -2,7 +2,7 @@
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE.txt or http://www.boost.org/LICENSE_1_0.txt)
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 setup(
     # metadata
@@ -27,7 +27,7 @@ setup(
     install_requires=['conan >= 1.37'],
     package_data={'barbarians': []},
     package_dir={"": "src"},
-    packages=find_packages(where="src"),
+    packages=find_namespace_packages(where="src"),
     python_requires=">=3.6",
     entry_points={
         'console_scripts': [
