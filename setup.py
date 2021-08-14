@@ -9,7 +9,7 @@ VERSION = '0.1'
 
 print("TEST_VERSION:", os.getenv('TEST_VERSION'))
 if os.getenv('GHA_TEST_VERSION'):
-    VERSION = VERSION + '-test+' + os.getenv('GITHUB_RUN_NUMBER')
+    VERSION = VERSION + '.dev' + os.getenv('GITHUB_RUN_NUMBER')
 
 setup(
     # metadata
