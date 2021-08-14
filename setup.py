@@ -7,11 +7,14 @@ import os
 
 VERSION = '0.1'
 
+print("TEST_VERSION:", os.getenv('TEST_VERSION'))
+if os.getenv('TEST_VERSION'):
+    VERSION = VERSION + '.' + os.getenv('TEST_VERSION')
+
 setup(
     # metadata
     name='barbarian',
-    version=VERSION if not os.getenv(
-        'TEST_VERSION') else VERSION+'.'+os.getenv('TEST_VERSION'),
+    version=VERSION,
     description='Utility tool for managing Conan recipes for the Barbarian Conan server.',
     url='https://barbarian.bfgroup.xyz',
     author='René Ferdinand Rivera Morell',
