@@ -19,7 +19,7 @@ jobs:
       - name: Build PyPI Package
         run: python -m build --sdist --wheel --outdir dist/
         env:
-          TEST_VERSION: ${{ env.GITHUB_RUN_NUMBER }}
+          GHA_TEST_VERSION: yes
       - name: Publish to Test PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:

@@ -8,8 +8,8 @@ import os
 VERSION = '0.1'
 
 print("TEST_VERSION:", os.getenv('TEST_VERSION'))
-if os.getenv('TEST_VERSION'):
-    VERSION = VERSION + '.' + os.getenv('TEST_VERSION')
+if os.getenv('GHA_TEST_VERSION'):
+    VERSION = VERSION + '.' + os.getenv('GITHUB_RUN_NUMBER')
 
 setup(
     # metadata
