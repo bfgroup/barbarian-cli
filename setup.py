@@ -3,11 +3,15 @@
 # (See accompanying file LICENSE.txt or http://www.boost.org/LICENSE_1_0.txt)
 
 from setuptools import setup, find_namespace_packages
+import os
+
+VERSION = '0.1'
 
 setup(
     # metadata
     name='barbarian',
-    version='0.1',
+    version=VERSION if not os.getenv(
+        'TEST_VERSION') else VERSION+'.'+os.getenv('TEST_VERSION'),
     description='Utility tool for managing Conan recipes for the Barbarian Conan server.',
     url='https://barbarian.bfgroup.xyz',
     author='René Ferdinand Rivera Morell',
@@ -20,8 +24,9 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3'
     ],
-    keywords=['C/C++', 'package', 'libraries', 'developer', 'manager',
-              'dependency', 'tool', 'c', 'c++', 'cpp'],
+    keywords=[
+        'package', 'libraries', 'developer', 'manager', 'dependency', 'tool',
+        'c', 'c++', 'cpp'],
     license='BSL 1.0',
     # options
     install_requires=['conan >= 1.37'],
