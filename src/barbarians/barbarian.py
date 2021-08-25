@@ -5,7 +5,7 @@
 from argparse import ArgumentParser, Action
 from os import environ, getcwd, chdir
 from shutil import rmtree, copytree
-from subprocess import run, PIPE
+from subprocess import run, PIPE, CalledProcessError
 import hashlib
 import json
 import os.path
@@ -13,6 +13,13 @@ import tarfile
 import datetime
 import yaml
 from conans import tools
+import conans.client.conan_api
+
+
+class UsageError(RuntimeError):
+    def __init__(self, reason):
+        super().__init__()
+        self.reason = reason
 
 
 class Barbarian(object):
@@ -40,7 +47,7 @@ class Barbarian(object):
         )
         ap_upload.add_argument(
             "reference",
-            help="user/channel, Pkg/version@user/channel (if name and version are not declared in the conanfile.py) Pkg/version@ if user/channel is not relevant."
+            help="Pkg/version@user/channel"
         )
 
         # Upload branch..
@@ -83,7 +90,11 @@ class Barbarian(object):
 
         if self.args.command:
             if hasattr(self, "command_"+self.args.command):
-                getattr(self, "command_"+self.args.command)(self.args)
+                try:
+                    getattr(self, "command_"+self.args.command)(self.args)
+                except UsageError as error:
+                    print(error.reason)
+                    exit(1)
 
     def exec(self, command, input=None, capture_output=False, env={}):
         input = input.encode() if input else None
@@ -112,7 +123,13 @@ class Barbarian(object):
         if not self._root_dir:
             dir = self.recipe_dir if self.recipe_dir else getcwd()
             while not os.path.exists(os.path.join(dir, ".git")):
-                dir = os.path.dirname(dir)
+                parent = os.path.dirname(dir)
+                if parent == dir:
+                    raise UsageError('''[ERROR] \
+Failed to find a git repo for the project. Using Barbarian requires \
+a git repo to be initialized, and linked to a remote, ahead of time.\
+''')
+                dir = parent
             self._root_dir = dir
             print("[INFO] root_dir =", self._root_dir)
 
@@ -145,15 +162,11 @@ class Barbarian(object):
         if not self._recipe_name_and_version:
             recipe_nv = args.reference.split('@', 1)[0].split('/')
             if self.recipe_dir:
-                env = {'CONAN_USER_HOME': self.root_dir}
-                recipe_n = self.exec(
-                    ["conan", "inspect", "--raw", "name", self.recipe_dir],
-                    env=env,
-                    capture_output=True).stdout
-                recipe_v = self.exec(
-                    ["conan", "inspect", "--raw", "version", self.recipe_dir],
-                    env=env,
-                    capture_output=True).stdout
+                recipe_props = self.conan_api.inspect(
+                    self.recipe_dir,
+                    ['name', 'version'])
+                recipe_n = recipe_props['name']
+                recipe_v = recipe_props['version']
             if recipe_nv:
                 if len(recipe_nv) == 1:
                     recipe_v = recipe_nv[0]
@@ -164,8 +177,9 @@ class Barbarian(object):
             # print("[INFO] recipe_name_and_version =",
             #       self._recipe_name_and_version)
 
-    # Recipe data dir where the export puts information. This is locally controlled to be relative to
-    # the root dir. And calculated from root dir and "self.recipe_name_and_version".
+    # Recipe data dir where the export puts information. This is locally
+    # controlled to be relative to the root dir. And calculated from root dir
+    # and "self.recipe_name_and_version".
 
     _recipe_data_dir = None
 
@@ -201,8 +215,8 @@ class Barbarian(object):
             self._recipe_user_and_channel = [recipe_u, recipe_c]
             # print("[INFO] recipe_user_and_channel =", self._recipe_user_and_channel)
 
-    # Recipe export dir, where conan puts the exported recipe data, calculated from "self.recipe_data_dir"
-    # and "self.recipe_user_and_channel".
+    # Recipe export dir, where conan puts the exported recipe data, calculated
+    # from "self.recipe_data_dir" and "self.recipe_user_and_channel".
 
     _recipe_export_dir = None
 
@@ -219,8 +233,8 @@ class Barbarian(object):
                 self.recipe_data_dir, *self.recipe_user_and_channel)
             # print("[INFO] recipe_export_dir =", self._recipe_export_dir)
 
-    # Recipe publish dir, is where we create the published/uploaded recipe data. Calculated from
-    # "self.root_dir" and "self.recipe_name_and_version".
+    # Recipe publish dir, is where we create the published/uploaded recipe
+    # data. Calculated from "self.root_dir" and "self.recipe_name_and_version".
 
     _recipe_publish_dir = None
 
@@ -239,8 +253,8 @@ class Barbarian(object):
                 *self.recipe_name_and_version)
             # print("[INFO] recipe_publish_dir =", self._recipe_publish_dir)
 
-    # Recipe exported revision, which is the revision in the generated export data.
-    # Uses "self.recipe_export_dir".
+    # Recipe exported revision, which is the revision in the generated export
+    # data. Uses "self.recipe_export_dir".
 
     _recipe_exported_revision = None
 
@@ -276,6 +290,15 @@ class Barbarian(object):
 
     # Utilities..
 
+    _conan_api: conans.client.conan_api.Conan = None
+
+    @property
+    def conan_api(self):
+        if not self._conan_api:
+            self._conan_api = conans.client.conan_api.Conan(
+                cache_folder=os.path.join(self.root_dir, '.conan'))
+        return self._conan_api
+
     def have_branch(self, branch):
         branch_list = self.exec(
             ["git", "branch", "--list", branch], capture_output=True).stdout.strip("\n\t *+")
@@ -284,8 +307,14 @@ class Barbarian(object):
     def make_empty_branch(self, branch, message):
         if not self.have_branch(branch):
             cwd = getcwd()
-            self.exec(["git", "worktree", "add", "--quiet", "-b",
-                       branch+"-tmp", os.path.join(cwd, "."+branch+".tmp")])
+            try:
+                self.exec(["git", "worktree", "add", "--quiet", "-b",
+                           branch+"-tmp", os.path.join(cwd, "."+branch+".tmp")])
+            except CalledProcessError:
+                raise UsageError('''[ERROR] \
+Uploading requires the git repo to have a HEAD revision to create upload \
+branch.\
+''')
             chdir(os.path.join(cwd, "."+branch+".tmp"))
             self.exec(["git", "checkout", "--quiet", "--orphan", branch])
             self.exec(["git", "rm", "--quiet", "-rf", "."])
@@ -334,9 +363,9 @@ class Barbarian(object):
         rmtree(self.recipe_data_dir, ignore_errors=True)
         # Tweak gitignore to blank out temp conan data.
         gitignore_path = os.path.join(self.root_dir, ".gitignore")
-        if not os.path.exists(gitignore_path):
-            tools.touch(gitignore_path)
-        gitignore = tools.load(gitignore_path)
+        gitignore = ""
+        if os.path.exists(gitignore_path):
+            gitignore = tools.load(gitignore_path)
         if not '/.conan/' in gitignore:
             gitignore = "/.conan/\n" + gitignore
             tools.save(gitignore_path, gitignore)
@@ -351,8 +380,17 @@ class Barbarian(object):
         self.recipe_publish_dir = args
         self.recipe_revision_pub_dir = args
         self.recipe_name_and_version = args
+        self.recipe_user_and_channel = args
         print("[INFO] Uploading revision %s to %s" %
               (self.recipe_exported_revision, self.recipe_publish_dir))
+        # Check prerequisites.
+        try:
+            self.exec(["git", "remote", "show", "origin"])
+        except CalledProcessError:
+            raise UsageError('''[ERROR] \
+Upload requires an existing git remote origin to push new packages to. Please \
+set a remote to push to with "git remote add origin <url>".\
+''')
         # Checkout the upload branch.
         self.make_barbarian_branch()
         worktree_dir = os.path.join(self.root_dir, ".barbarian_upload")
@@ -406,6 +444,14 @@ class Barbarian(object):
                 self.recipe_exported_revision)])
             # Upload, aka push, the branch.
             self.push_barbarian_branch()
+            # Fetch the exported data to "register" the new recipe revision with the server.
+            self.conan_api.remote_add(
+                "barbarian-github",
+                "https://barbarian.bfgroup.xyz/github")
+            self.conan_api.get_path(
+                "%s/%s@%s/%s#%s" % (
+                    *self.recipe_name_and_version, *self.recipe_user_and_channel, self.recipe_exported_revision),
+                remote_name="barbarian-github")
         finally:
             # Clean up the upload tree.
             chdir(cwd)
@@ -442,7 +488,7 @@ class Barbarian(object):
             conanfile_py_path = os.path.join(package_dir, "conanfile.py")
             if os.path.exists(conanfile_py_path) and not args.overwrite:
                 print("[INFO] Skipped overwrite of existing recipe %s" %
-                    (conanfile_py_path))
+                      (conanfile_py_path))
             else:
                 print("[INFO] Creating recipe %s" % (conanfile_py_path))
                 conanfile_py_text = self.conanfile_py_base_template
@@ -455,7 +501,7 @@ class Barbarian(object):
             conandata_yml_path = os.path.join(package_dir, "conandata.yml")
             if os.path.exists(conandata_yml_path) and not args.overwrite:
                 print("[INFO] Skipped overwrite of existing recipe data %s" %
-                    (conandata_yml_path))
+                      (conandata_yml_path))
             else:
                 print("[INFO] Creating recipe data %s" % (conandata_yml_path))
                 self.render_template(
@@ -481,10 +527,10 @@ class Barbarian(object):
                     self.root_dir, ".github", "workflows", "barbarian.yml")
                 if os.path.exists(ga_conan_workflow_path) and not args.overwrite:
                     print("[INFO] Skipped overwrite of existing GitHub Actions setup %s" %
-                        (ga_conan_workflow_path))
+                          (ga_conan_workflow_path))
                 else:
                     print("[INFO] Creating GitHub Actions setup %s" %
-                        (ga_conan_workflow_path))
+                          (ga_conan_workflow_path))
                     os.makedirs(os.path.dirname(
                         ga_conan_workflow_path), exist_ok=True)
                     self.render_template(

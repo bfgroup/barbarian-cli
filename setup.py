@@ -29,20 +29,12 @@ setup(
     ],
     keywords=[
         'package', 'libraries', 'developer', 'manager', 'dependency', 'tool',
-        'c', 'c++', 'cpp'],
+        'c', 'c++', 'cpp', 'conan'],
     license='BSL 1.0',
     long_description='''\
 # Barbarian
 
 Utility tool for managing Conan recipes for the Barbarian Conan server.
-
-## Install
-
-```sh
-pip install barbarian
-```
-
-## Usage
 
 You can find information on how to use this tool to create Conan packages for
 the Barbarian server at the [website](https://barbarian.bfgroup.xyz/).
