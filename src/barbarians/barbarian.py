@@ -297,6 +297,7 @@ a git repo to be initialized, and linked to a remote, ahead of time.\
         if not self._conan_api:
             self._conan_api = conans.client.conan_api.Conan(
                 cache_folder=os.path.join(self.root_dir, '.conan'))
+            self._conan_api.config_set("general.revisions_enabled", "True")
         return self._conan_api
 
     def have_branch(self, branch):
@@ -445,12 +446,16 @@ set a remote to push to with "git remote add origin <url>".\
             # Upload, aka push, the branch.
             self.push_barbarian_branch()
             # Fetch the exported data to "register" the new recipe revision with the server.
+            recipe_ref = "%s/%s@%s/%s#%s" % (
+                *self.recipe_name_and_version, *self.recipe_user_and_channel, self.recipe_exported_revision)
+            print("[INFO] Register recipe", recipe_ref)
             self.conan_api.remote_add(
                 "barbarian-github",
-                "https://barbarian.bfgroup.xyz/github")
-            self.conan_api.get_path(
-                "%s/%s@%s/%s#%s" % (
-                    *self.recipe_name_and_version, *self.recipe_user_and_channel, self.recipe_exported_revision),
+                "https://barbarian.bfgroup.xyz/github",
+                force=True)
+            conan_export_tgz = self.conan_api.get_path(
+                recipe_ref,
+                path="conan_export.tgz",
                 remote_name="barbarian-github")
         finally:
             # Clean up the upload tree.
