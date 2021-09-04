@@ -3,7 +3,7 @@
 # (See accompanying file LICENSE.txt or http://www.boost.org/LICENSE_1_0.txt)
 
 from argparse import ArgumentParser, Action
-from os import environ, getcwd, chdir
+from os import environ, getcwd, chdir, listdir
 from shutil import rmtree, copytree
 from subprocess import run, PIPE, CalledProcessError
 import hashlib
@@ -412,20 +412,14 @@ set a remote to push to with "git remote add origin <url>".\
                 self.recipe_revision_pub_dir, "files", "conan_export.tgz")
             with tarfile.open(conan_export_tgz, 'w|gz') as tgz:
                 tgz.add(conandata_yml, os.path.basename(conandata_yml))
-            # Generate snapshot.json (v1) and files.json (v2).
+            # Generate snapshot.json (v1), and files.json (v2).
             snapshot = {}
             files = {'files': {}}
-            with open(conan_export_tgz, "rb") as f:
-                digest = hashlib.md5(f.read()).hexdigest()
-                snapshot[os.path.basename(conan_export_tgz)] = digest
-                files['files'][os.path.basename(conan_export_tgz)] = {}
-            with open(os.path.join(self.recipe_export_dir, "export", "conanmanifest.txt"), "rb") as f:
-                snapshot["conanmanifest.txt"] = hashlib.md5(
-                    f.read()).hexdigest()
-                files['files']["conanmanifest.txt"] = {}
-            with open(os.path.join(self.recipe_export_dir, "export", "conanfile.py"), "rb") as f:
-                snapshot["conanfile.py"] = hashlib.md5(f.read()).hexdigest()
-                files['files']["conanfile.py"] = {}
+            for export_file in listdir(os.path.join(self.recipe_revision_pub_dir, "files")):
+                with open(os.path.join(self.recipe_revision_pub_dir, "files", export_file), "rb") as f:
+                    digest = hashlib.md5(f.read()).hexdigest()
+                    snapshot[export_file] = digest
+                    files['files'][export_file] = {}
             with open(os.path.join(self.recipe_revision_pub_dir, "snapshot.json"), "w", encoding="utf-8") as f:
                 json.dump(snapshot, f)
             with open(os.path.join(self.recipe_revision_pub_dir, "files.json"), "w", encoding="utf-8") as f:
