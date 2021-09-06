@@ -37,7 +37,7 @@ class Barbarian(object):
             help="Path to a folder containing a conanfile.py or to a recipe file e.g., my_folder/conanfile.py")
         ap_export.add_argument(
             "reference",
-            help="Pkg/version@user/channel, Pkg/version@ if user/channel is not relevant."
+            help="Pkg/version@user/channel"
         )
 
         # Upload command..
