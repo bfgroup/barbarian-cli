@@ -358,6 +358,8 @@ branch.\
         self.root_dir = args
         self.recipe_data_dir = args
         self.recipe_export_dir = args
+        self.recipe_name_and_version = args
+        self.recipe_user_and_channel = args
         # Info.
         print("[INFO] Exporting to %s" % (self.recipe_export_dir))
         # Remove old data.
@@ -371,8 +373,12 @@ branch.\
             gitignore = "/.conan/\n" + gitignore
             tools.save(gitignore_path, gitignore)
         # Do the basic export.
-        env = {'CONAN_USER_HOME': self.root_dir}
-        self.exec(["conan", "export", args.path, args.reference], env=env)
+        self.conan_api.export(
+            args.path,
+            self.recipe_name_and_version[0],
+            self.recipe_name_and_version[1],
+            self.recipe_user_and_channel[0],
+            self.recipe_user_and_channel[1])
 
     def command_upload(self, args):
         # Compute state.
