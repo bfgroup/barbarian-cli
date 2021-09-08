@@ -608,7 +608,7 @@ import os
 
 class Package(ConanFile):
     name = "<<<NAME>>>"
-    homepage = "https://github.com/<<<USER>>>/<<<NAME>>>"
+    homepage = "https://github.com/<<<USER>>>/<<<GROUP>>>"
     description = "<<<SHORT_DESCRIPTION>>>"
     topics = ("<<<TOPICS>>>")
     license = "<<<LICENSE>>>"
@@ -674,7 +674,7 @@ class Package(ConanFile):
     conandata_yml_template = '''\
 sources:
   "<<<VERSION>>>":
-    url: "https://github.com/<<<USER>>>/<<<NAME>>>/archive/refs/tags/<<<VERSION>>>.tar.gz"
+    url: "https://github.com/<<<USER>>>/<<<GROUP>>>/archive/refs/tags/<<<VERSION>>>.tar.gz"
 '''
 
 
