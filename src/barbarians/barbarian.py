@@ -334,7 +334,7 @@ branch.\
         self.make_barbarian_branch()
         self.exec(["git", "push", "origin", "barbarian"])
 
-    bpt_package_reference = "git+https://github.com/bincrafters/bincrafters-package-tools@issue/1391"
+    bpt_package_reference = "git+https://github.com/bfgroup/bincrafters-package-tools@develop"
 
     def render_template(self, template, path):
         text = template

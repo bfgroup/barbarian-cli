@@ -41,7 +41,7 @@ the Barbarian server at the [website](https://barbarian.bfgroup.xyz/).
 ''',
     long_description_content_type="text/markdown",
     # options
-    install_requires=['conan >= 1.37'],
+    install_requires=['conan >= 1.41'],
     package_data={'barbarians': []},
     package_dir={"": "src"},
     packages=find_namespace_packages(where="src"),
