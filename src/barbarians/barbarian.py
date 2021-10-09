@@ -543,13 +543,13 @@ set a remote to push to with "git remote add origin <url>".\
 
     ga_conan_workflow_template = '''\
 env:
-    CONAN_REMOTES: "https://barbarian.bfgroup.xyz/github@barbarian-github, https://bincrafters.jfrog.io/artifactory/api/conan/public-conan@bincrafters"
-    BPT_SPLIT_BY_BUILD_TYPES: "true"
+    CONAN_REMOTES: "https://barbarian.bfgroup.xyz/github@True@barbarian-github"
+    CONAN_STABLE_BRANCH_PATTERN: "_____"
+    CONAN_UPLOAD_ONLY_WHEN_STABLE: 1
 
 on:
     push:
         branches: ["main", "develop"]
-    pull_request:
 
 name: conan
 
