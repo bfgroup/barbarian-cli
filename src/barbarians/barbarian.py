@@ -544,12 +544,14 @@ set a remote to push to with "git remote add origin <url>".\
     ga_conan_workflow_template = '''\
 env:
     CONAN_REMOTES: "https://barbarian.bfgroup.xyz/github@True@barbarian-github"
-    CONAN_STABLE_BRANCH_PATTERN: "_____"
-    CONAN_UPLOAD_ONLY_WHEN_STABLE: 1
+    CONAN_BUILD_POLICY: "missing"
+    BPT_NO_UPLOAD: yes
+    BPT_CONFIG_FILE_VERSION: "11"
 
 on:
     push:
         branches: ["main", "develop"]
+    pull_request:
 
 name: conan
 
@@ -559,15 +561,9 @@ jobs:
         runs-on: ubuntu-latest
         outputs:
             matrix: ${{ steps.set-matrix.outputs.matrix }}
-        env:
-            BPT_CONFIG_FILE_VERSION: "11"
         steps:
-            - uses: actions/checkout@v2
-              with:
-                  fetch-depth: "0"
-            - uses: actions/setup-python@v2
-              with:
-                  python-version: "3.x"
+            - { uses: actions/checkout@v2, with: { fetch-depth: "0" } }
+            - { uses: actions/setup-python@v2, with: { python-version: "3.x" } }
             - name: Install Package Tools
               run: |
                   pip install <<<BPT_PACKAGE>>>
@@ -585,20 +581,14 @@ jobs:
             fail-fast: false
             matrix: ${{fromJson(needs.generate-matrix.outputs.matrix)}}
         name: ${{ matrix.config.name }}
-        env:
-            BPT_CONFIG_FILE_VERSION: "11"
         steps:
-            - uses: actions/checkout@v2
-              with:
-                  fetch-depth: "0"
-            - uses: actions/setup-python@v2
-              with:
-                  python-version: "3.x"
+            - { uses: actions/checkout@v2, with: { fetch-depth: "0" } }
+            - { uses: actions/setup-python@v2, with: { python-version: "3.x" } }
             - name: Install Conan
               env:
                   BPT_MATRIX: ${{toJson(matrix.config)}}
               run: |
-                  pip install <<<BPT_PACKAGE>>>
+                  pip install git+https://github.com/bfgroup/bincrafters-package-tools@develop
                   # remove newlines from matrix first
                   matrix=$(echo ${BPT_MATRIX})
                   bincrafters-package-tools prepare-env --platform gha --config "${matrix}"
