@@ -1,5 +1,10 @@
 = History
 
+== 0.1.1
+
+* Fixes not including recipe exported sources in upload.
+* Fixes errors when recipe does not have a `conandata.yml` specification file.
+
 == 0.1
 
 Initial release of `barbarian` tool to manage Conan packages for the Barbarian

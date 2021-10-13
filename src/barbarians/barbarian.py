@@ -417,7 +417,16 @@ set a remote to push to with "git remote add origin <url>".\
             conan_export_tgz = os.path.join(
                 self.recipe_revision_pub_dir, "files", "conan_export.tgz")
             with tarfile.open(conan_export_tgz, 'w|gz') as tgz:
-                tgz.add(conandata_yml, os.path.basename(conandata_yml))
+                if os.path.exists(conandata_yml):
+                    tgz.add(conandata_yml, os.path.basename(conandata_yml))
+            # Generate the conan_sources.tgz.
+            export_source_dir = os.path.join(
+                self.recipe_export_dir, "export_source")
+            conan_sources_tgz = os.path.join(
+                self.recipe_revision_pub_dir, "files", "conan_sources.tgz")
+            with tarfile.open(conan_sources_tgz, 'w|gz') as tgz:
+                for source in os.listdir(export_source_dir):
+                    tgz.add(os.path.join(export_source_dir, source), source)
             # Generate snapshot.json (v1), and files.json (v2).
             snapshot = {}
             files = {'files': {}}
