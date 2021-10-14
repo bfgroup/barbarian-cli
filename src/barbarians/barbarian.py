@@ -14,6 +14,7 @@ import datetime
 import yaml
 from conans import tools
 import conans.client.conan_api
+from sty import fg
 
 
 class UsageError(RuntimeError):
@@ -93,21 +94,26 @@ class Barbarian(object):
                 try:
                     getattr(self, "command_"+self.args.command)(self.args)
                 except UsageError as error:
-                    print(error.reason)
+                    print(fg.red + error.reason + fg.rs)
                     exit(1)
 
     def exec(self, command, input=None, capture_output=False, env={}):
-        input = input.encode() if input else None
-        e = environ.copy()
-        e.update(env)
-        result = run(
-            command,
-            env=e,
-            input=input,
-            stdout=PIPE if capture_output else None,
-            text=True if capture_output else None)
-        result.check_returncode()
-        return result
+        try:
+            input = input.encode() if input else None
+            e = environ.copy()
+            e.update(env)
+            result = run(
+                command,
+                env=e,
+                input=input,
+                stdout=PIPE if capture_output else None,
+                text=True if capture_output else None)
+            result.check_returncode()
+            return result
+        except FileNotFoundError as error:
+            raise UsageError('''[ERROR] \
+Failed to find a "{0}" program. Using Barbarian requires the "{0}" program. \
+'''.format(command[0]))
 
     # Root dir, calculated from recipe dir.
 

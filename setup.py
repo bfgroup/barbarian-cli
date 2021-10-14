@@ -5,7 +5,7 @@
 from setuptools import setup, find_namespace_packages
 import os
 
-VERSION = '0.1.1'
+VERSION = '0.1.2'
 
 print("TEST_VERSION:", os.getenv('TEST_VERSION'))
 if os.getenv('GHA_TEST_VERSION'):
@@ -41,7 +41,7 @@ the Barbarian server at the [website](https://barbarian.bfgroup.xyz/).
 ''',
     long_description_content_type="text/markdown",
     # options
-    install_requires=['conan >= 1.41'],
+    install_requires=['conan >= 1.41', 'sty >= 1.0.0rc2'],
     package_data={'barbarians': []},
     package_dir={"": "src"},
     packages=find_namespace_packages(where="src"),
