@@ -1,5 +1,9 @@
 = History
 
+== 0.1.2
+
+* Fix exception spew when git exec is not found.
+
 == 0.1.1
 
 * Fixes not including recipe exported sources in upload.
