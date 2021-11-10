@@ -311,6 +311,10 @@ a git repo to be initialized, and linked to a remote, ahead of time.\
             hooks_dir_src = os.path.join(os.path.dirname(
                 os.path.abspath(__file__)), "hooks")
             hooks_dir_dst = os.path.join(self.root_dir, '.conan', 'hooks')
+            # Need to make sure the hooks dst dir exists to copy into.
+            if not os.path.exists(hooks_dir_dst):
+                os.mkdir(hooks_dst_dir)
+            # Copy all the hooks we have so we can register them as needed.
             for name in os.listdir(hooks_dir_src):
                 if name.endswith('.py'):
                     copy(os.path.join(hooks_dir_src, name),
