@@ -4,7 +4,7 @@
 
 from argparse import ArgumentParser, Action
 from os import environ, getcwd, chdir, listdir
-from shutil import rmtree, copytree
+from shutil import rmtree, copytree, copy
 from subprocess import run, PIPE, CalledProcessError
 import hashlib
 import json
@@ -303,7 +303,18 @@ a git repo to be initialized, and linked to a remote, ahead of time.\
         if not self._conan_api:
             self._conan_api = conans.client.conan_api.Conan(
                 cache_folder=os.path.join(self.root_dir, '.conan'))
+            # Create local conan config, if needed.
+            self._conan_api.config_init()
+            # Barbarian only works with recipe revisions.
             self._conan_api.config_set("general.revisions_enabled", "True")
+            # Install hooks for manipulating and checking packages.
+            hooks_dir_src = os.path.join(os.path.dirname(
+                os.path.abspath(__file__)), "hooks")
+            hooks_dir_dst = os.path.join(self.root_dir, '.conan', 'hooks')
+            for name in os.listdir(hooks_dir_src):
+                if name.endswith('.py'):
+                    copy(os.path.join(hooks_dir_src, name),
+                         os.path.join(hooks_dir_dst, name))
         return self._conan_api
 
     def have_branch(self, branch):
@@ -378,6 +389,8 @@ branch.\
         if not '/.conan/' in gitignore:
             gitignore = "/.conan/\n" + gitignore
             tools.save(gitignore_path, gitignore)
+        # Enable needed hooks.
+        self.conan_api.config_set('hooks.barbarian_clean_conandata_yml', "")
         # Do the basic export.
         self.conan_api.export(
             args.path,
