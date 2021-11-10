@@ -329,6 +329,18 @@ a git repo to be initialized, and linked to a remote, ahead of time.\
     def make_empty_branch(self, branch, message):
         if not self.have_branch(branch):
             cwd = getcwd()
+            # The branch may exists in the upstream but not locally. So we try
+            # and fetch it from the origin. We ignore the errors, as it just
+            # means we already have the remote branch locally available.
+            try:
+                self.exec(["git", "fetch", "origin", "barbarian"])
+            except CalledProcessError:
+                pass
+            try:
+                self.exec(["git", "branch", "barbarian", "origin/barbarian"])
+            except CalledProcessError:
+                pass
+            # Do a git dance to create a fresh truly detached branch.
             try:
                 self.exec(["git", "worktree", "add", "--quiet", "-b",
                            branch+"-tmp", os.path.join(cwd, "."+branch+".tmp")])
