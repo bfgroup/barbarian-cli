@@ -331,16 +331,19 @@ a git repo to be initialized, and linked to a remote, ahead of time.\
             # The branch may exists in the upstream but not locally. So we try
             # and fetch it from the origin. We ignore the errors, as it just
             # means we already have the remote branch locally available.
+            print("[INFO] Optionally fetching '{0}' branch from origin.".format(branch))
             try:
-                self.exec(["git", "fetch", "origin", "barbarian"])
+                self.exec(["git", "fetch", "--quiet", "origin", "barbarian"])
             except CalledProcessError:
                 pass
+            print("[INFO] Optionally creating local '{0}' branch from origin.".format(branch))
             try:
                 self.exec(["git", "branch", "barbarian", "origin/barbarian"])
             except CalledProcessError:
                 pass
         if not self.have_branch(branch):
             # Do a git dance to create a fresh truly detached branch.
+            print("[INFO] Creating local '{0}' branch.".format(branch))
             cwd = getcwd()
             try:
                 self.exec(["git", "worktree", "add", "--quiet", "-b",
@@ -360,9 +363,7 @@ branch.\
                       os.path.join(cwd, "."+branch+".tmp")])
 
     def make_barbarian_branch(self):
-        if not self.have_branch("barbarian"):
-            print("[INFO] Creating 'barbarian' branch.")
-            self.make_empty_branch("barbarian", "Barbarian upload branch.")
+        self.make_empty_branch("barbarian", "Barbarian upload branch.")
 
     def push_barbarian_branch(self):
         self.make_barbarian_branch()
