@@ -137,7 +137,7 @@ a git repo to be initialized, and linked to a remote, ahead of time.\
 ''')
                 dir = parent
             self._root_dir = dir
-            print("[INFO] root_dir =", self._root_dir)
+            print("[INFO] root_dir =", self._root_dir, flush=True)
 
     # Recipe dir, calculated from "path" arg.
 
@@ -151,7 +151,7 @@ a git repo to be initialized, and linked to a remote, ahead of time.\
     def recipe_dir(self, args):
         if not self._recipe_dir and hasattr(args, "path"):
             self._recipe_dir = os.path.abspath(args.path)
-            # print("[INFO] recipe_dir =", self._recipe_dir)
+            # print("[INFO] recipe_dir =", self._recipe_dir, flush=True)
 
     # Recipe name and version, as a list, calculated from conan inspection "reference" arg.
 
@@ -180,7 +180,7 @@ a git repo to be initialized, and linked to a remote, ahead of time.\
                     recipe_n = recipe_nv[0]
                     recipe_v = recipe_nv[1]
             self._recipe_name_and_version = [recipe_n, recipe_v]
-            # print("[INFO] recipe_name_and_version =",
+            # print("[INFO] recipe_name_and_version =", flush=True,
             #       self._recipe_name_and_version)
 
     # Recipe data dir where the export puts information. This is locally
@@ -200,7 +200,7 @@ a git repo to be initialized, and linked to a remote, ahead of time.\
         if not self._recipe_data_dir:
             self._recipe_data_dir = os.path.join(
                 self.root_dir, ".conan", "data", self.recipe_name_and_version[0], self.recipe_name_and_version[1])
-            # print("[INFO] recipe_data_dir =", self._recipe_data_dir)
+            # print("[INFO] recipe_data_dir =", self._recipe_data_dir, flush=True)
 
     _recipe_user_and_channel = None
 
@@ -219,7 +219,7 @@ a git repo to be initialized, and linked to a remote, ahead of time.\
             recipe_c = recipe_uc[1] if recipe_uc and len(
                 recipe_uc) > 1 and len(recipe_uc[1]) > 0 else '_'
             self._recipe_user_and_channel = [recipe_u, recipe_c]
-            # print("[INFO] recipe_user_and_channel =", self._recipe_user_and_channel)
+            # print("[INFO] recipe_user_and_channel =", self._recipe_user_and_channel, flush=True)
 
     # Recipe export dir, where conan puts the exported recipe data, calculated
     # from "self.recipe_data_dir" and "self.recipe_user_and_channel".
@@ -237,7 +237,7 @@ a git repo to be initialized, and linked to a remote, ahead of time.\
         if not self._recipe_export_dir:
             self._recipe_export_dir = os.path.join(
                 self.recipe_data_dir, *self.recipe_user_and_channel)
-            # print("[INFO] recipe_export_dir =", self._recipe_export_dir)
+            # print("[INFO] recipe_export_dir =", self._recipe_export_dir, flush=True)
 
     # Recipe publish dir, is where we create the published/uploaded recipe
     # data. Calculated from "self.root_dir" and "self.recipe_name_and_version".
@@ -257,7 +257,7 @@ a git repo to be initialized, and linked to a remote, ahead of time.\
                 self.root_dir,
                 ".barbarian_upload",
                 *self.recipe_name_and_version)
-            # print("[INFO] recipe_publish_dir =", self._recipe_publish_dir)
+            # print("[INFO] recipe_publish_dir =", self._recipe_publish_dir, flush=True)
 
     # Recipe exported revision, which is the revision in the generated export
     # data. Uses "self.recipe_export_dir".
@@ -275,7 +275,7 @@ a git repo to be initialized, and linked to a remote, ahead of time.\
             with open(os.path.join(self.recipe_export_dir, "metadata.json"), "r") as f:
                 j = json.loads(f.read())
                 self._recipe_exported_revision = j['recipe']['revision']
-            # print("[INFO] recipe_exported_revision =", self._recipe_exported_revision)
+            # print("[INFO] recipe_exported_revision =", self._recipe_exported_revision, flush=True)
 
     # Recipe revision specific publish dir.
 
@@ -292,7 +292,7 @@ a git repo to be initialized, and linked to a remote, ahead of time.\
         if not self._recipe_revision_pub_dir:
             self._recipe_revision_pub_dir = os.path.join(
                 self.recipe_publish_dir, self.recipe_exported_revision)
-            # print("[INFO] recipe_revision_pub_dir =", self._recipe_revision_pub_dir)
+            # print("[INFO] recipe_revision_pub_dir =", self._recipe_revision_pub_dir, flush=True)
 
     # Utilities..
 
@@ -331,19 +331,19 @@ a git repo to be initialized, and linked to a remote, ahead of time.\
             # The branch may exists in the upstream but not locally. So we try
             # and fetch it from the origin. We ignore the errors, as it just
             # means we already have the remote branch locally available.
-            print("[INFO] Optionally fetching '{0}' branch from origin.".format(branch))
+            print("[INFO] Optionally fetching '{0}' branch from origin.".format(branch), flush=Trueq)
             try:
                 self.exec(["git", "fetch", "--quiet", "origin", "barbarian"])
             except CalledProcessError:
                 pass
-            print("[INFO] Optionally creating local '{0}' branch from origin.".format(branch))
+            print("[INFO] Optionally creating local '{0}' branch from origin.".format(branch), flush=True)
             try:
-                self.exec(["git", "branch", "barbarian", "origin/barbarian"])
+                self.exec(["git", "branch", "--quiet", "barbarian", "origin/barbarian"])
             except CalledProcessError:
                 pass
         if not self.have_branch(branch):
             # Do a git dance to create a fresh truly detached branch.
-            print("[INFO] Creating local '{0}' branch.".format(branch))
+            print("[INFO] Creating local '{0}' branch.".format(branch), flush=True)
             cwd = getcwd()
             try:
                 self.exec(["git", "worktree", "add", "--quiet", "-b",
@@ -396,7 +396,7 @@ branch.\
         self.recipe_name_and_version = args
         self.recipe_user_and_channel = args
         # Info.
-        print("[INFO] Exporting to %s" % (self.recipe_export_dir))
+        print("[INFO] Exporting to %s" % (self.recipe_export_dir), flush=True)
         # Remove old data.
         rmtree(self.recipe_data_dir, ignore_errors=True)
         # Tweak gitignore to blank out temp conan data.
@@ -425,7 +425,7 @@ branch.\
         self.recipe_revision_pub_dir = args
         self.recipe_name_and_version = args
         self.recipe_user_and_channel = args
-        print("[INFO] Uploading revision %s to %s" %
+        print("[INFO] Uploading revision %s to %s" , flush=True%
               (self.recipe_exported_revision, self.recipe_publish_dir))
         # Check prerequisites.
         try:
@@ -494,7 +494,7 @@ set a remote to push to with "git remote add origin <url>".\
             # Fetch the exported data to "register" the new recipe revision with the server.
             recipe_ref = "%s/%s@%s/%s#%s" % (
                 *self.recipe_name_and_version, *self.recipe_user_and_channel, self.recipe_exported_revision)
-            print("[INFO] Register recipe", recipe_ref)
+            print("[INFO] Register recipe", recipe_ref, flush=True)
             self.conan_api.remote_add(
                 "barbarian-github",
                 "https://barbarian.bfgroup.xyz/github",
@@ -538,10 +538,10 @@ set a remote to push to with "git remote add origin <url>".\
                     self.root_dir, "recipes", self._recipe_name_and_version[0], "all")
             conanfile_py_path = os.path.join(package_dir, "conanfile.py")
             if os.path.exists(conanfile_py_path) and not args.overwrite:
-                print("[INFO] Skipped overwrite of existing recipe %s" %
+                print("[INFO] Skipped overwrite of existing recipe %s" , flush=True%
                       (conanfile_py_path))
             else:
-                print("[INFO] Creating recipe %s" % (conanfile_py_path))
+                print("[INFO] Creating recipe %s" % (conanfile_py_path), flush=True)
                 conanfile_py_text = self.conanfile_py_base_template
                 if args.header_only:
                     conanfile_py_text += self.conanfile_py_header_only_template
@@ -551,10 +551,10 @@ set a remote to push to with "git remote add origin <url>".\
                 self.render_template(conanfile_py_text, conanfile_py_path)
             conandata_yml_path = os.path.join(package_dir, "conandata.yml")
             if os.path.exists(conandata_yml_path) and not args.overwrite:
-                print("[INFO] Skipped overwrite of existing recipe data %s" %
+                print("[INFO] Skipped overwrite of existing recipe data %s" , flush=True%
                       (conandata_yml_path))
             else:
-                print("[INFO] Creating recipe data %s" % (conandata_yml_path))
+                print("[INFO] Creating recipe data %s" % (conandata_yml_path), flush=True)
                 self.render_template(
                     self.conandata_yml_template, conandata_yml_path)
             # Update recipe index.
@@ -568,7 +568,7 @@ set a remote to push to with "git remote add origin <url>".\
                 config_yml_data['versions'] = {
                     self.recipe_name_and_version[1]: {
                         'folder': 'all'}}
-                print("[INFO] Updating recipe info %s" % (config_yml_path))
+                print("[INFO] Updating recipe info %s" % (config_yml_path), flush=True)
                 with open(config_yml_path, "w") as config_yml:
                     yaml.dump(config_yml_data, config_yml)
         if 'ci' in to_generate:
@@ -577,10 +577,10 @@ set a remote to push to with "git remote add origin <url>".\
                 ga_conan_workflow_path = os.path.join(
                     self.root_dir, ".github", "workflows", "barbarian.yml")
                 if os.path.exists(ga_conan_workflow_path) and not args.overwrite:
-                    print("[INFO] Skipped overwrite of existing GitHub Actions setup %s" %
+                    print("[INFO] Skipped overwrite of existing GitHub Actions setup %s" , flush=True%
                           (ga_conan_workflow_path))
                 else:
-                    print("[INFO] Creating GitHub Actions setup %s" %
+                    print("[INFO] Creating GitHub Actions setup %s" , flush=True%
                           (ga_conan_workflow_path))
                     os.makedirs(os.path.dirname(
                         ga_conan_workflow_path), exist_ok=True)
