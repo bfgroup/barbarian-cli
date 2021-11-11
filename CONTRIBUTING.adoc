@@ -1,0 +1,65 @@
+= Contributing
+
+This is a command line program that manages creating and publishing Conan
+packages to the Barbarian server. We welcome all reasonable submissions
+to improve this program.
+
+== Discussion
+
+Before diving in and contributing it's expected that you discuss your
+proposed changes in our general Barbarian repository
+https://github.com/bfgroup/barbarian/discussions[forums]. And if
+applicable, refer to any such discussions in your pull request.
+
+== Requirements
+
+When submitting changes please check the following requirements. Making
+sure you follow them helps us consider your changes quicker.
+
+=== License
+
+We use the Boost Software License Version 1.0. Which means that:
+
+* If you add a new file it must include a copyright and license statement
+  (either at the top or bottom of the file).
+  Use this text as a template (where `YYYY` is the current year):
+```
+Copyright YYYY Your Full Name
+Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE.txt or http://www.boost.org/LICENSE_1_0.txt)
+```
+
+* If it's a substantial addition to an existing file add a copyright
+  attribution for yourself. Add a new line below the existing copyright
+  statements with this template (where `YYYY` is the current year):
+```
+Copyright YYYY Your Full Name
+```
+
+=== History
+
+Communicating to others the core changes is important to users. With your
+change make sure to add to the release notes in the `HISTORY.adoc` file.
+
+=== Code Style
+
+This repository include and `.editorconfig` file that includes preferred
+basic code style rules we follow. Please use an editor that uses those
+https://EditorConfig.org[EditorConfig] settings. For the Python code use
+`autopep8` to apply formatting.
+
+=== Documentation
+
+The main documentation for the CLI exists in the barbarian-server. And
+hence we don't expect corresponding documentation. We do appreciate
+documentation that explains what your change is doing. I.e. we like
+seeing documented code. And we especially love pull requests that just
+add documentation.
+
+== Testing
+
+We currently do not have unit tests for the CLI program. And hence don't expect
+additions to contain tests. But we do expect for you to have tested your
+changes on your own. We also do have a repository of Conan packages
+specifically for helping test use cases
+(https://github.com/bfgroup/barbarian-test).
