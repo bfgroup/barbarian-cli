@@ -1,6 +1,7 @@
-= BFG Barbarian
+= Barbarian
 
-Utility tool for managing Conan recipes for the Barbarian Conan server.
+Utility tool for managing Conan recipes for the
+https://barbarian.bfgroup.xyz/[Barbarian Conan server].
 
 == License
 
