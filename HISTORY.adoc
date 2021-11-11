@@ -1,5 +1,13 @@
 = History
 
+== 0.2.1
+
+* Fix errors if the barbarian branch exist on origin only.
+
+== 0.2.0
+
+* Avoid extra version fields in conandata to make for stable packages.
+
 == 0.1.2
 
 * Fix exception spew when git exec is not found.
