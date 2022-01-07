@@ -1,5 +1,10 @@
 = History
 
+== 0.2.2
+
+* Fix errors when trying to refer to recipe dependencies in the Barbarian
+  service during export and upload of Barbarian recipes.
+
 == 0.2.1
 
 * Fix errors if the barbarian branch exist on origin only.

@@ -319,6 +319,11 @@ a git repo to be initialized, and linked to a remote, ahead of time.\
                 if name.endswith('.py'):
                     copy(os.path.join(hooks_dir_src, name),
                          os.path.join(hooks_dir_dst, name))
+            # Add the Barbarian remote so we can find dependencies.
+            self.conan_api.remote_add(
+                "barbarian-github",
+                "https://barbarian.bfgroup.xyz/github",
+                force=True)
         return self._conan_api
 
     def have_branch(self, branch):
@@ -499,10 +504,6 @@ set a remote to push to with "git remote add origin <url>".\
             recipe_ref = "%s/%s@%s/%s#%s" % (
                 *self.recipe_name_and_version, *self.recipe_user_and_channel, self.recipe_exported_revision)
             print("[INFO] Register recipe", recipe_ref, flush=True)
-            self.conan_api.remote_add(
-                "barbarian-github",
-                "https://barbarian.bfgroup.xyz/github",
-                force=True)
             conan_export_tgz = self.conan_api.get_path(
                 recipe_ref,
                 path="conan_export.tgz",
