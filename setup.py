@@ -5,7 +5,7 @@
 from setuptools import setup, find_namespace_packages
 import os
 
-VERSION = '0.2.2'
+VERSION = '0.3.0'
 
 print("TEST_VERSION:", os.getenv('TEST_VERSION'))
 if os.getenv('GHA_TEST_VERSION'):

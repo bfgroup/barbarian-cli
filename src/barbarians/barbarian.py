@@ -26,6 +26,16 @@ class UsageError(RuntimeError):
 class Barbarian(object):
     def __init__(self):
         ap = ArgumentParser("barbarian")
+
+        # General options..
+        ap.add_argument(
+            "--remote",
+            help="The remote Barbarian repo to use specified as `<URL>@<NAME>."
+            + " Defaults to `https://barbarian.bfgroup.xyz/github@barbarian-github`.",
+            default="https://barbarian.bfgroup.xyz/github@barbarian-github"
+        )
+
+        # Sub-commands..
         ap_sub = ap.add_subparsers(dest="command")
 
         # Export command..
@@ -88,6 +98,10 @@ class Barbarian(object):
             action=ChoiceArgAction)
 
         self.args = ap.parse_args()
+
+        # Synthesize some info from general arguments..
+        self.args.remote_url = self.args.remote.split('@')[0]
+        self.args.remote_name = self.args.remote.split('@')[1]
 
         if self.args.command:
             if hasattr(self, "command_"+self.args.command):
@@ -321,8 +335,8 @@ a git repo to be initialized, and linked to a remote, ahead of time.\
                          os.path.join(hooks_dir_dst, name))
             # Add the Barbarian remote so we can find dependencies.
             self.conan_api.remote_add(
-                "barbarian-github",
-                "https://barbarian.bfgroup.xyz/github",
+                self.args.remote_name,
+                self.args.remote_url,
                 force=True)
         return self._conan_api
 
@@ -392,6 +406,10 @@ branch.\
             "<<<VERSION>>>", self._recipe_name_and_version[1])
         text = text.replace(
             "<<<BPT_PACKAGE>>>", self.bpt_package_reference)
+        text = text.replace(
+            "<<<REMOTE_URL>>>", self.args.remote_url)
+        text = text.replace(
+            "<<<REMOTE_NAME>>>", self.args.remote_name)
         with open(path, "w") as file:
             file.write(text)
 
@@ -507,7 +525,7 @@ set a remote to push to with "git remote add origin <url>".\
             conan_export_tgz = self.conan_api.get_path(
                 recipe_ref,
                 path="conan_export.tgz",
-                remote_name="barbarian-github")
+                remote_name=self.args.remote_name)
         finally:
             # Clean up the upload tree.
             chdir(cwd)
@@ -597,7 +615,7 @@ set a remote to push to with "git remote add origin <url>".\
 
     ga_conan_workflow_template = '''\
 env:
-    CONAN_REMOTES: "https://barbarian.bfgroup.xyz/github@True@barbarian-github"
+    CONAN_REMOTES: "<<<REMOTE_URL>>>@True@<<<REMOTE_URL>>>"
     CONAN_BUILD_POLICY: "missing"
     BPT_NO_UPLOAD: yes
     BPT_CONFIG_FILE_VERSION: "11"
