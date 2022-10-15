@@ -634,8 +634,8 @@ jobs:
         outputs:
             matrix: ${{ steps.set-matrix.outputs.matrix }}
         steps:
-            - { uses: actions/checkout@v2, with: { fetch-depth: "0" } }
-            - { uses: actions/setup-python@v2, with: { python-version: "3.x" } }
+            - { uses: actions/checkout@v3, with: { fetch-depth: "0" } }
+            - { uses: actions/setup-python@v4, with: { python-version: "3.x" } }
             - name: Install Package Tools
               run: |
                   pip install <<<BPT_PACKAGE>>>
