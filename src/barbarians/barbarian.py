@@ -654,8 +654,8 @@ jobs:
             matrix: ${{fromJson(needs.generate-matrix.outputs.matrix)}}
         name: ${{ matrix.config.name }}
         steps:
-            - { uses: actions/checkout@v2, with: { fetch-depth: "0" } }
-            - { uses: actions/setup-python@v2, with: { python-version: "3.x" } }
+            - { uses: actions/checkout@v3, with: { fetch-depth: "0" } }
+            - { uses: actions/setup-python@v4, with: { python-version: "3.x" } }
             - name: Install Conan
               env:
                   BPT_MATRIX: ${{toJson(matrix.config)}}
