@@ -5,7 +5,7 @@
 from setuptools import setup, find_namespace_packages
 import os
 
-VERSION = '0.3.1'
+VERSION = '0.4.0'
 
 print("TEST_VERSION:", os.getenv('TEST_VERSION'))
 if os.getenv('GHA_TEST_VERSION'):
@@ -45,7 +45,7 @@ the Barbarian server at the [website](https://barbarian.bfgroup.xyz/).
     package_data={'barbarians': []},
     package_dir={"": "src"},
     packages=find_namespace_packages(where="src"),
-    python_requires=">=3.6",
+    python_requires=">=3.8",
     entry_points={
         'console_scripts': [
             'barbarian=barbarians.barbarian:main'

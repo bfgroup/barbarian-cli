@@ -15,6 +15,7 @@ import yaml
 from conans import tools
 import conans.client.conan_api
 from sty import fg
+from importlib.metadata import version
 
 
 class UsageError(RuntimeError):
@@ -28,6 +29,11 @@ class Barbarian(object):
         ap = ArgumentParser("barbarian")
 
         # General options..
+        ap.add_argument(
+            "--version",
+            help="Show the installed version.",
+            action="version",
+            version='%(prog)s ' + (version('barbarian')))
         ap.add_argument(
             "--remote",
             help="The remote Barbarian repo to use specified as `<URL>@<NAME>."
