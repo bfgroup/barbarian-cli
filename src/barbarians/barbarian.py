@@ -650,8 +650,11 @@ jobs:
               id: set-matrix
               run: |
                   MATRIX=$(bincrafters-package-tools generate-ci-jobs --platform gha)
+                  DELIM=$(uuidgen)
                   echo "${MATRIX}"
-                  echo "::set-output name=matrix::${MATRIX}"
+                  echo "matrix<<${DELIM}" >> ${GITHUB_OUTPUT}
+                  echo "${MATRIX}" >> ${GITHUB_OUTPUT}
+                  echo "${DELIM}" >> ${GITHUB_OUTPUT}
     conan:
         needs: generate-matrix
         runs-on: ${{ matrix.config.os }}
